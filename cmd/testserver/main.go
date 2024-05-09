@@ -13,6 +13,7 @@ func main() {
 	srv := http.Server{
 		Addr: fmt.Sprintf(":%d", port),
 		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Println("handling")
 			w.Write([]byte("hello"))
 		}),
 	}

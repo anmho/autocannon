@@ -7,18 +7,11 @@ import (
 	"time"
 )
 
-func request(target string) {
-	res, err := http.Get(target)
-    if err != nil {
-        panic(err)}
+var client http.Client
 
-	fmt.Println("status", res.Status)
 
-	markDone()
-}
 
 var doneMu = sync.RWMutex{}
-
 var done = 0
 
 func markDone() {
@@ -35,42 +28,44 @@ func readDone() int {
 
 
 func do(doneChan chan string) {
-	res, err := http.Get("http://localhost:3000")
+	
+	res, err := client.Get("http://localhost:3000")
 	if err != nil {
 		panic(err)
 	}
-	defer res.Body.Close()
+
+	res.Body.Close()
 
 	// respChan <- res
 
 	doneChan <- res.Status
+	
 	markDone()
 }
 
 func main() {
 	var start = time.Now()
 
+	client = http.Client{
+		Transport: &http.Transport{MaxConnsPerHost: 100},
+	}
 
-	// num inflight
-	// total rps
 
+	total := 100_000
 	var doneChan = make(chan string)
-	for range 1900 {
-		elapsed := time.Since(start).Seconds()
+	for range total {
 		go do(doneChan)
 
-		// if len(doneChan) > 100 {
-		// 	continue
-		// }
 		
-		rps := float64(readDone())/elapsed
-		fmt.Printf("rps: %f elapsed: %f", rps, elapsed)
 		select {
 		case <-doneChan:
-			fmt.Printf(<-doneChan)
+			fmt.Println(<-doneChan)
 		default:
 			continue
-		}
-		fmt.Println()
+		}		
 	}
+	elapsed := time.Since(start).Seconds()
+	rps := float64(total) / elapsed
+	fmt.Printf("rps: %f elapsed: %f", rps, elapsed)
+
 }
